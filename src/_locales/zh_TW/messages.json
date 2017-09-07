@@ -1,0 +1,17 @@
+{
+  "appName": {
+    "message": "旋轉賣家協助工具"
+  },
+  "appDescription": {
+    "message": "幫助賣家在Carousell上方便地進行各種操作。"
+  },
+  "versionName": {
+    "message": "刈包-beta1"
+  },
+  "htmlLang": {
+      "message": "zh-Hant"
+  },
+  "options": {
+      "message": "選項"
+  }
+}

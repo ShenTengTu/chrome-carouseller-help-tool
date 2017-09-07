@@ -1,0 +1,17 @@
+{
+  "appName": {
+    "message": "Carouseller Help Tool"
+  },
+  "appDescription": {
+    "message": "Help seller making various operations conveniently on Carousell."
+  },
+  "versionName": {
+    "message": "Gua bao-beta1"
+  },
+  "htmlLang": {
+      "message": "en"
+  },
+  "options": {
+      "message": "Options"
+  }
+}
