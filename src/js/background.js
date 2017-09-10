@@ -10,6 +10,17 @@ import {Message} from './class/Message';
   //mainly detect redirecting which using react route
   //tab will update when scrolling winow
   chrome.tabs.onUpdated.addListener(tabUpdateHandler);
+  chrome.contextMenus.onClicked.addListener((info,tab)=>{
+    console.log(info);
+    var port = connectPorts[`content-${tab.id}`];
+    if(port){
+      var match = /^productName-tags-(.+)$/g.exec(info.menuItemId);
+      var tags = ["#含運最划算","#交換最划算"];
+      if(match[1] && tags[match[1]]){
+        port.postMessage(new Message('execute_contextmenu', {tag:tags[match[1]]}));//postMessage
+      }
+    }
+  })
 
   function tabUpdateHandler(id,info,tab){
     console.log(info,tabs_Update);
@@ -54,13 +65,32 @@ import {Message} from './class/Message';
 
       function fn_content(msg, port) {
         switch (msg.name) {
-          case 'req_executeScript':
+          case 'sell_form_exsist':
+            var propArr = [
+              {id:"chrome-carouseller-help-tool",title:`${chrome.i18n.getMessage("appName")}<${chrome.i18n.getMessage("versionName")}>`,contexts:["editable"],documentUrlPatterns:["https://tw.carousell.com/*"]},
+              {parentId:"chrome-carouseller-help-tool",id:"sellFrom-ProductName-tags",title:"商品名稱標籤",contexts:["editable"],documentUrlPatterns:["https://tw.carousell.com/sell/"]},
+              {parentId:"sellFrom-ProductName-tags",id:"productName-tags-0",title:"#含運最划算",contexts:["editable"],documentUrlPatterns:["https://tw.carousell.com/sell/"]},
+              {parentId:"sellFrom-ProductName-tags",id:"productName-tags-1",title:"#交換最划算",contexts:["editable"],documentUrlPatterns:["https://tw.carousell.com/sell/"]},
+            ];
+            contextMenuBulider(propArr,()=>{
+              port.postMessage(new Message('init_sell_form_tool', msg.data));//postMessage
+            })
 
             break;
         }
       }
     }
 
+  }
+
+  function contextMenuBulider(propArr,donefn){
+    let run = propArr.reduceRight(reducefn,donefn);
+    run();
+    function reducefn(fnChain,prop){
+      return function (){
+        chrome.contextMenus.create(prop,fnChain);
+      }
+    }
   }
 
 })(chrome);

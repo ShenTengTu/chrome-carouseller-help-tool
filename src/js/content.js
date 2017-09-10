@@ -2,9 +2,12 @@
 
 import {Message} from './class/Message';
 
+var $ = require('jquery');
+require('jquery-sendkeys');
 
 (function(chrome){
   var port = chrome.runtime.connect({ name: "content" });
+  var onContextmenuEl;
   port.onMessage.addListener(messageHandler);
   function messageHandler(msg) {
     switch (msg.name) {
@@ -17,6 +20,15 @@ import {Message} from './class/Message';
       case "tab_updated":
         console.log("tab_updated",msg.data.url);
         assignTask(window.location,port);
+        break;
+      case "init_sell_form_tool":
+        console.log("init_sell_form_tool",msg.data);
+        initSellFormTool(msg.data);
+        break;
+      case "execute_contextmenu":
+        //Must simulate keypress to input text
+        //becuase it is react component,value attribute is just a getter
+        $(onContextmenuEl).sendkeys(msg.data.tag);
         break;
     }
   }
@@ -37,7 +49,12 @@ import {Message} from './class/Message';
 
     if(l_host === "tw.carousell.com"){
       //get product page id
+      window.addEventListener("contextmenu",function(e){
+        onContextmenuEl = e.target;
+        console.log(e);
+      })
       task_showProductPageId(l_pathname);
+      task_observeSellForm(l_pathname);
     }
 
     function task_showProductPageId(pathname){
@@ -60,6 +77,61 @@ import {Message} from './class/Message';
       }
     }
 
+    function task_observeSellForm(pathname){
+      let bool = /^\/sell\//g.test(pathname);
+      if(bool){
+        let sellForm = document.querySelector("div[data-reactroot]");
+        let sellFormObserver = new MutationObserver(observe);
+        sellFormObserver.observe( sellForm, {childList:true,subtree:true} );
+      }
+
+      function observe(records, observer) {
+        var ListingFieldSets = document.querySelectorAll("fieldset.ListingFieldSetGroup__group___1HHpj");
+        if (ListingFieldSets.length === 4) {
+          let input_ProductName = ListingFieldSets[0].querySelector('input[type="text"]');
+          let input_ProductPrice = ListingFieldSets[0].querySelector('input[type="number"]');
+          let input_StatusUsed = ListingFieldSets[1].querySelector('input[type="radio"][id="1"]');
+          let input_StatusNew = ListingFieldSets[1].querySelector('input[type="radio"][id="2"]');
+          let input_Meetup = ListingFieldSets[2].querySelector('input[type="checkbox"][name="meetup"]');
+          let input_Mailing = ListingFieldSets[2].querySelector('input[type="checkbox"][name="mailing"]');
+          let button_Location = ListingFieldSets[2].querySelector('button.ListingFieldSetFields__pickerCell___vU1ue.ListingFormPickerCell__item___2WHe0');
+          button_Location.id = "seller-location";
+          let textareas_Set2 = ListingFieldSets[2].querySelectorAll('textarea');
+          let textarea_Set3 = ListingFieldSets[3].querySelector('textarea');
+          let elementsID = {
+            productName: input_ProductName.id,
+            productPrice: input_ProductPrice.id,
+            statusUsed: input_StatusUsed.id,
+            statusNew: input_StatusNew.id,
+            meetup: input_Meetup.id,
+            mailing: input_Mailing.id,
+            location: button_Location.id,
+            meetupContent: textareas_Set2[0].id,
+            mailingContent: textareas_Set2[1].id,
+            productContent: textarea_Set3.id
+          }
+          port.postMessage(new Message('sell_form_exsist', elementsID));//postMessage
+          observer.disconnect();
+        }
+      }
+
+    }
+
+  }
+
+  function initSellFormTool(elementsID){
+    let {
+      productName: id_productName,
+      productPrice: id_productPrice,
+      statusUsed: id_statusUsed,
+      statusNew: id_statusNew,
+      meetup: id_meetup,
+      mailing: id_mailing,
+      location: id_location,
+      meetupContent: id_meetupContent,
+      mailingContent: id_mailingContent,
+      productContent: id_productContent
+    } = elementsID;
   }
 
   function selectText(el) {
@@ -87,63 +159,25 @@ import {Message} from './class/Message';
     }
   }
 
-
-
-  /*var {
-      hash:l_hash,
-      host:l_host,
-      hostname:l_hostname,
-      href:l_href,
-      origin:l_origin,
-      pathname:l_pathname,
-      port:l_port,
-      protocol:l_protocol,
-      search:l_search
-  }= window.location;
-
-  console.log(window.location);
-
-
-  var inputElement = {
-      input_ProductName:null,
-      input_ProductPrice:null,
-      input_StatusUsed:null,
-      input_StatusNew:null,
-      input_Meetup:null,
-      input_Mailing:null,
-      button_Location:null,
-      textareas_Set2:null,
-      textarea_Set3:null
+  function getElementPosition(el) {
+    var pos = {
+      x: 0,
+      y: 0
+    };
+    while (el) {
+      pos.x += (el.offsetLeft - el.scrollLeft + el.clientLeft);
+      pos.y += (el.offsetTop - el.scrollTop + el.clientTop);
+      el = el.offsetParent;
+    }
+    return pos;
   }
 
-  if(l_host === "tw.carousell.com"){
-      //sell page work
-      if(/^\/sell\//g.test(l_pathname)){
-          var sellForm = document.querySelector("div[data-reactroot]");
-          var sellFormObserver = new MutationObserver(observeSellForm);
-          sellFormObserver.observe( sellForm, {childList:true,subtree:true} );
-          //window.addEventListener("click",(e)=>{console.dir(e.target)});
 
-      }
-      //get product page id
-      if(/^\/p\//g.test(l_pathname)){
-          var match = /-(\d+)\//g.exec(l_pathname);
-          var div = document.createElement("div");
-          div.innerText = match[1];
-          div.style.position = "fixed";
-          div.style.right = "8px";
-          div.style.top = "58px";
-          div.style.zIndex = "99999";
-          div.style.padding = "8px";
-          div.style.backgroundColor = "#f5bcbc";
-          div.style.cursor = "pointer";
-          div.addEventListener("click",(e)=>{
-      	    selectText(e.target);
-              document.execCommand('copy');
-              removeSelect();
-          });
-          document.body.appendChild(div);
-      }
+
+  /*
+
+  if(l_host === "tw.carousell.com"){
+
       //get all category
       if(l_pathname === "/"){
           let li = document.querySelectorAll('.MenuItem__menuItem___2Cf8J');
@@ -199,23 +233,7 @@ import {Message} from './class/Message';
 
   }
 
-  function observeSellForm(records,observer){
-      //console.log(records);
-      var ListingFieldSets = document.querySelectorAll("fieldset.ListingFieldSetGroup__group___1HHpj");
-      if (ListingFieldSets.length === 4){
-              inputElement.input_ProductName = ListingFieldSets[0].querySelector('input[type="text"]'),
-              inputElement.input_ProductPrice = ListingFieldSets[0].querySelector('input[type="number"]'),
-              inputElement.input_StatusUsed = ListingFieldSets[1].querySelector('input[type="radio"][id="1"]'),
-              inputElement.input_StatusNew = ListingFieldSets[1].querySelector('input[type="radio"][id="2"]'),
-              inputElement.input_Meetup = ListingFieldSets[2].querySelector('input[type="checkbox"][name="meetup"]'),
-              inputElement.input_Mailing = ListingFieldSets[2].querySelector('input[type="checkbox"][name="mailing"]'),
-              inputElement.button_Location = ListingFieldSets[2].querySelector('button.ListingFieldSetFields__pickerCell___vU1ue.ListingFormPickerCell__item___2WHe0'),
-              inputElement.textareas_Set2 = ListingFieldSets[2].querySelectorAll('textarea'),
-              inputElement.textarea_Set3 = ListingFieldSets[3].querySelector('textarea');
-          console.log(inputElement);
-          observer.disconnect();
-      }
-  }
+
 
 
 

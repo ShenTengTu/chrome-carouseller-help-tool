@@ -26,7 +26,7 @@ var manifest = {
   "description": i18n.description,
   "homepage_url": "https://github.com/ShenTengTu/chrome-carouseller-help-tool",
   "author": packageJSON.author,
-  "permissions": ["activeTab"].concat(url_matches), //permission for background page
+  "permissions": ["activeTab","contextMenus"].concat(url_matches), //permission for background page
   "icons": {
     "16": "img/icon16.png",
     "48": "img/icon48.png",

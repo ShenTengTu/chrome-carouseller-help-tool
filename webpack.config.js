@@ -24,7 +24,7 @@ const extractLess = new ExtractTextPlugin({
 const nodeModules = path.join(process.cwd(), 'node_modules');
 const realNodeModules = fs.realpathSync(nodeModules);
 const genDirNodeModules = path.join(process.cwd(), 'src', '$$_gendir', 'node_modules');
-const scriptsModules = path.join(process.cwd(), 'src/js/class');
+const classModules = path.join(process.cwd(), 'src/js/class');
 
 var config = {
   devtool: "source-map",
@@ -105,7 +105,7 @@ var config = {
     new CommonsChunkPlugin({
       name: ["common"], //for custom shared scripts
       minChunks: (module) => {
-        return module.resource && module.resource.startsWith(scriptsModules);
+        return module.resource && module.resource.startsWith(classModules);
       },
       chunks: ["content", "background"]
     }),
@@ -123,7 +123,7 @@ var config = {
 };
 
 if(!isDev){
-  config.plugins.push(new UglifyJsPlugin());
+  config.plugins.push(new UglifyJsPlugin({compress: {drop_console: true}}));
   delete config.devtool;
 }
 
